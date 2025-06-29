@@ -1,7 +1,10 @@
 package computerdatabase
 
 import io.gatling.core.Predef._
+import io.gatling.core.feeder.BatchableFeederBuilder
+import io.gatling.core.structure.{ChainBuilder, ScenarioBuilder}
 import io.gatling.http.Predef._
+import io.gatling.http.protocol.HttpProtocolBuilder
 
 import java.util.concurrent.ThreadLocalRandom
 
@@ -13,9 +16,9 @@ import java.util.concurrent.ThreadLocalRandom
  */
 class ComputerDatabaseSimulation extends Simulation {
 
-  val feeder = csv("search.csv").random
+  val feeder: BatchableFeederBuilder[String] = csv("search.csv").random
 
-  val search =
+  val search: ChainBuilder =
     exec(
       http("Home")
         .get("/")
@@ -38,7 +41,7 @@ class ComputerDatabaseSimulation extends Simulation {
       .pause(1)
 
   // repeat is a loop resolved at RUNTIME
-  val browse =
+  val browse: ChainBuilder =
   // Note how we force the counter name, so we can reuse it
     repeat(4, "i") {
       exec(
@@ -50,7 +53,7 @@ class ComputerDatabaseSimulation extends Simulation {
   // let's demonstrate how we can retry: let's make the request fail randomly and retry a given
   // number of times
 
-  val edit =
+  val edit: ChainBuilder =
   // let's try at max 2 times
     tryMax(2) {
       exec(
@@ -78,7 +81,7 @@ class ComputerDatabaseSimulation extends Simulation {
       // if the chain didn't finally succeed, have the user exit the whole scenario
       .exitHereIfFailed
 
-  val httpProtocol =
+  val httpProtocol: HttpProtocolBuilder =
     http.baseUrl("https://computer-database.gatling.io")
       .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
       .acceptLanguageHeader("en-US,en;q=0.5")
@@ -87,8 +90,8 @@ class ComputerDatabaseSimulation extends Simulation {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0"
       )
 
-  val users = scenario("Users").exec(search, browse)
-  val admins = scenario("Admins").exec(search, browse, edit)
+  val users: ScenarioBuilder = scenario("Users").exec(search, browse)
+  val admins: ScenarioBuilder = scenario("Admins").exec(search, browse, edit)
 
   setUp(
     users.inject(rampUsers(10).during(10)),
